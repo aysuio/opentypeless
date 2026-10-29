@@ -1,3 +1,5 @@
+> **Personal development fork:** Windows + Android voice keyboard, direct Groq and Google keys. Start with [PERSONAL-FORK.md](PERSONAL-FORK.md) and the [security review](docs/SECURITY-REVIEW-2026-10-29.md). The upstream product/download documentation below is retained for attribution and background; it does not describe this fork's test packages or account behavior.
+
 <p align="center">
   <strong>English</strong> | <a href="README_zh.md">中文</a> | <a href="README_ja.md">日本語</a> | <a href="README_ko.md">한국어</a> | <a href="README_es.md">Español</a> | <a href="README_fr.md">Français</a> | <a href="README_de.md">Deutsch</a> | <a href="README_pt.md">Português</a> | <a href="README_ru.md">Русский</a> | <a href="README_ar.md">العربية</a> | <a href="README_hi.md">हिन्दी</a> | <a href="README_it.md">Italiano</a> | <a href="README_tr.md">Türkçe</a> | <a href="README_vi.md">Tiếng Việt</a> | <a href="README_th.md">ภาษาไทย</a> | <a href="README_id.md">Bahasa Indonesia</a> | <a href="README_pl.md">Polski</a> | <a href="README_nl.md">Nederlands</a>
 </p>

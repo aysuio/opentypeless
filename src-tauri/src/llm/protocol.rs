@@ -41,6 +41,11 @@ fn parse_http_url(base_url: &str) -> Result<url::Url, String> {
     if !matches!(url.scheme(), "http" | "https") {
         return Err("LLM base URL must use http or https scheme".to_string());
     }
+    if url.scheme() == "http"
+        && !matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))
+    {
+        return Err("Remote LLM services require HTTPS".to_string());
+    }
     if !url.username().is_empty() || url.password().is_some() {
         return Err("LLM base URL must not include credentials".to_string());
     }
@@ -55,6 +60,48 @@ fn replace_or_append_path(url: &mut url::Url, current_suffix: &str, target_suffi
     let path = url.path().trim_end_matches('/');
     let root = path.strip_suffix(current_suffix).unwrap_or(path);
     url.set_path(&format!("{root}{target_suffix}"));
+}
+
+fn validate_google_destination(provider: &str, url: &url::Url) -> Result<(), String> {
+    if provider.eq_ignore_ascii_case("gemini")
+        && (url.scheme() != "https"
+            || url.host_str() != Some("generativelanguage.googleapis.com")
+            || url.port_or_known_default() != Some(443))
+    {
+        return Err(
+            "Gemini credentials may only be sent directly to Google's HTTPS API".to_string(),
+        );
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod personal_security_tests {
+    use super::*;
+    #[test]
+    fn google_key_cannot_follow_a_changed_provider_host() {
+        assert!(chat_endpoint("gemini", "https://example.com/v1").is_err());
+        assert!(models_endpoint(
+            "gemini",
+            "http://generativelanguage.googleapis.com/v1beta/openai"
+        )
+        .is_err());
+        assert!(chat_endpoint(
+            "gemini",
+            "https://generativelanguage.googleapis.com:444/v1beta/openai"
+        )
+        .is_err());
+        assert!(chat_endpoint(
+            "gemini",
+            "https://generativelanguage.googleapis.com/v1beta/openai"
+        )
+        .is_ok());
+    }
+    #[test]
+    fn plaintext_is_only_allowed_on_loopback() {
+        assert!(chat_endpoint("custom", "http://example.com/v1").is_err());
+        assert!(chat_endpoint("custom", "http://127.0.0.1:8000/v1").is_ok());
+    }
 }
 
 fn anthropic_api_root(path: &str) -> String {
@@ -75,6 +122,7 @@ fn anthropic_api_root(path: &str) -> String {
 pub fn chat_endpoint(provider: &str, base_url: &str) -> Result<String, String> {
     let kind = detect_api_kind(provider, base_url);
     let mut url = parse_http_url(base_url)?;
+    validate_google_destination(provider, &url)?;
     match kind {
         LlmApiKind::AnthropicMessages => {
             let root = anthropic_api_root(url.path());
@@ -93,6 +141,7 @@ pub fn chat_endpoint(provider: &str, base_url: &str) -> Result<String, String> {
 pub fn models_endpoint(provider: &str, base_url: &str) -> Result<String, String> {
     let kind = detect_api_kind(provider, base_url);
     let mut url = parse_http_url(base_url)?;
+    validate_google_destination(provider, &url)?;
     match kind {
         LlmApiKind::AnthropicMessages => {
             let root = anthropic_api_root(url.path());

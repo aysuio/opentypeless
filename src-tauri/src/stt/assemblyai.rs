@@ -347,6 +347,7 @@ mod tests {
         SttConfig {
             api_key: "test-key".to_string(),
             language: None,
+            prompt: None,
             smart_format: true,
             sample_rate: 16_000,
             resource_id: None,

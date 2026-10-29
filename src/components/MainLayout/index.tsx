@@ -1,3 +1,4 @@
+import { UPSTREAM_CLOUD_ENABLED } from '../../lib/privacy'
 import { Home, Settings, History, Crown, CircleUser } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -70,77 +71,79 @@ export function MainLayout({ children }: Props) {
           })}
 
           {/* Upgrade / Pro nav item */}
-          {(() => {
-            const active = route === 'upgrade'
-            return (
-              <motion.button
-                onClick={() => navigate('upgrade')}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scaleX: 1.05, scaleY: 0.95 }}
-                transition={spring.jellyGentle}
-                className={`flex items-center gap-2.5 w-full px-3 py-2 text-[13px] rounded-[8px] transition-colors bg-transparent border-none cursor-pointer text-left relative ${
-                  active
-                    ? 'text-text-primary font-medium'
-                    : hasCloudAccess
-                      ? 'text-amber-500 hover:text-amber-400'
-                      : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {active && (
-                  <motion.div
-                    layoutId="nav-indicator"
-                    className="absolute inset-0 jelly-nav-active"
-                    transition={spring.jellyGentle}
-                  />
-                )}
-                <span className="relative z-10 flex items-center gap-2.5">
-                  <Crown size={16} className={hasCloudAccess ? 'text-amber-500' : ''} />
-                  {hasCloudAccess ? t('nav.pro') : t('nav.upgrade')}
-                </span>
-              </motion.button>
-            )
-          })()}
+          {UPSTREAM_CLOUD_ENABLED &&
+            (() => {
+              const active = route === 'upgrade'
+              return (
+                <motion.button
+                  onClick={() => navigate('upgrade')}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scaleX: 1.05, scaleY: 0.95 }}
+                  transition={spring.jellyGentle}
+                  className={`flex items-center gap-2.5 w-full px-3 py-2 text-[13px] rounded-[8px] transition-colors bg-transparent border-none cursor-pointer text-left relative ${
+                    active
+                      ? 'text-text-primary font-medium'
+                      : hasCloudAccess
+                        ? 'text-amber-500 hover:text-amber-400'
+                        : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      className="absolute inset-0 jelly-nav-active"
+                      transition={spring.jellyGentle}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2.5">
+                    <Crown size={16} className={hasCloudAccess ? 'text-amber-500' : ''} />
+                    {hasCloudAccess ? t('nav.pro') : t('nav.upgrade')}
+                  </span>
+                </motion.button>
+              )
+            })()}
         </nav>
 
         {/* Bottom: Account */}
         <div className="px-3 pb-3 mt-auto border-t border-border pt-3">
-          {(() => {
-            const { id, labelKey, icon: Icon } = bottomNavItem
-            const active = route === id
-            const label = t(labelKey)
-            return (
-              <motion.button
-                onClick={() => navigate(id)}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scaleX: 1.05, scaleY: 0.95 }}
-                transition={spring.jellyGentle}
-                className={`flex items-center gap-2.5 w-full px-3 py-2 text-[13px] rounded-[8px] transition-colors bg-transparent border-none cursor-pointer text-left relative ${
-                  active
-                    ? 'text-text-primary font-medium'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {active && (
-                  <motion.div
-                    layoutId="nav-indicator"
-                    className="absolute inset-0 jelly-nav-active"
-                    transition={spring.jellyGentle}
-                  />
-                )}
-                <span className="relative z-10 flex items-center gap-2.5">
-                  <Icon size={16} />
-                  {label}
-                </span>
-              </motion.button>
-            )
-          })()}
+          {UPSTREAM_CLOUD_ENABLED &&
+            (() => {
+              const { id, labelKey, icon: Icon } = bottomNavItem
+              const active = route === id
+              const label = t(labelKey)
+              return (
+                <motion.button
+                  onClick={() => navigate(id)}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scaleX: 1.05, scaleY: 0.95 }}
+                  transition={spring.jellyGentle}
+                  className={`flex items-center gap-2.5 w-full px-3 py-2 text-[13px] rounded-[8px] transition-colors bg-transparent border-none cursor-pointer text-left relative ${
+                    active
+                      ? 'text-text-primary font-medium'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      className="absolute inset-0 jelly-nav-active"
+                      transition={spring.jellyGentle}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2.5">
+                    <Icon size={16} />
+                    {label}
+                  </span>
+                </motion.button>
+              )
+            })()}
         </div>
       </aside>
 
       {/* Content */}
       <main className="flex-1 min-w-0 flex flex-col">
         <AccessibilityBanner />
-        <CloudServiceBanner />
+        {UPSTREAM_CLOUD_ENABLED && <CloudServiceBanner />}
         <div className="flex-1 overflow-y-auto">{children}</div>
       </main>
     </div>

@@ -1,3 +1,5 @@
+// Exercise the retained upstream module in isolation. Personal-edition blocking is covered by privacy.test.ts.
+vi.mock('../privacy', () => ({ UPSTREAM_CLOUD_ENABLED: true, requireUpstreamCloud: () => {} }))
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ApiError, CloudApiError } from '../api'
 import { API_BASE_URL, APP_VERSION_HEADER_VALUE, CLIENT_VERSION_HEADER } from '../constants'

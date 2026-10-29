@@ -89,6 +89,14 @@ export function LlmSetupStep() {
 
   return (
     <div className="space-y-5">
+      <label className="flex items-center gap-2 text-[13px]">
+        <input
+          type="checkbox"
+          checked={config.polish_enabled}
+          onChange={(event) => updateConfig({ polish_enabled: event.target.checked })}
+        />
+        {t('settings.enableAiPolish')}
+      </label>
       <Field label={t('onboarding.llm.serviceLabel')}>
         <select
           value={selectedProvider}

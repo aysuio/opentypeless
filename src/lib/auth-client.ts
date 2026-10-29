@@ -1,8 +1,10 @@
+import { requireUpstreamCloud } from './privacy'
 import { createAuthClient } from 'better-auth/client'
 import { API_BASE_URL, APP_VERSION_HEADER_VALUE, CLIENT_VERSION_HEADER } from './constants'
 import { loadSessionToken } from './cloud-session'
 
 const fetchWithToken: typeof fetch = async (url, init) => {
+  requireUpstreamCloud()
   const headers = new Headers(init?.headers)
   if (!headers.has(CLIENT_VERSION_HEADER)) {
     headers.set(CLIENT_VERSION_HEADER, APP_VERSION_HEADER_VALUE)

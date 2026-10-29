@@ -384,7 +384,7 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            stt_provider: "glm-asr".to_string(),
+            stt_provider: "groq-whisper".to_string(),
             stt_api_key: String::new(),
             stt_custom_api_key: String::new(),
             stt_language: "multi".to_string(),
@@ -395,12 +395,12 @@ impl Default for AppConfig {
                 .to_string(),
             stt_aliyun_qwen_region:
                 crate::stt::aliyun_qwen3_asr::ALIYUN_QWEN3_ASR_REGION_CHINA_MAINLAND.to_string(),
-            llm_provider: "openrouter".to_string(),
+            llm_provider: "gemini".to_string(),
             llm_api_key: String::new(),
-            llm_model: "google/gemini-2.5-flash".to_string(),
-            llm_base_url: "https://openrouter.ai/api/v1".to_string(),
-            polish_enabled: true,
-            context_adaptation_enabled: true,
+            llm_model: "gemini-3.8-flash".to_string(),
+            llm_base_url: "https://generativelanguage.googleapis.com/v1beta/openai".to_string(),
+            polish_enabled: false,
+            context_adaptation_enabled: false,
             voice_routing_flags: crate::voice_intent::VoiceRoutingFlags::default(),
             polish_style: "clean".to_string(),
             polish_custom_prompt: String::new(),
@@ -424,14 +424,14 @@ impl Default for AppConfig {
             streaming_insert_enabled: false,
             selected_text_enabled: false,
             theme: "system".to_string(),
-            auto_start: true,
+            auto_start: false,
             close_to_tray: true,
             start_minimized: false,
             recording_limit_mode: crate::stt::capabilities::RecordingLimitMode::Auto,
             custom_recording_limit_seconds: 600,
             max_recording_seconds: 30,
             managed_stt_capability_state: None,
-            history_enabled: true,
+            history_enabled: false,
             history_retention_days: 0,
             history_max_entries: DEFAULT_HISTORY_MAX_ENTRIES,
             ui_language: "en".to_string(),
@@ -2407,7 +2407,7 @@ mod tests {
             "llm_provider": "openrouter"
         });
         let default_config = AppConfig::from_stored_value(default_value).unwrap();
-        assert!(default_config.history_enabled);
+        assert!(!default_config.history_enabled);
         assert_eq!(default_config.history_retention_days, 0);
         assert_eq!(default_config.history_max_entries, 5000);
 
@@ -3045,7 +3045,7 @@ mod tests {
     fn app_config_new_install_defaults_capsule_auto_hide_true() {
         let config = AppConfig::new_install_default();
         assert!(config.capsule_auto_hide);
-        assert!(config.auto_start);
+        assert!(!config.auto_start);
     }
 
     #[cfg(target_os = "macos")]

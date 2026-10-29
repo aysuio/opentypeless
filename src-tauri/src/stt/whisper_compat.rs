@@ -31,6 +31,49 @@ fn upload_error(error: reqwest::Error) -> AppError {
     }
 }
 
+/// Conservative byte budget: a byte-level tokenizer cannot produce more tokens
+/// than input bytes. Leave headroom below Groq's 224-token prompt limit.
+pub fn dictionary_prompt(words: &[String]) -> Option<String> {
+    let mut prompt = String::new();
+    for word in words {
+        let word = word.trim();
+        if word.is_empty() || word.chars().any(char::is_control) {
+            continue;
+        }
+        let separator = if prompt.is_empty() { "" } else { ", " };
+        if prompt.len() + separator.len() + word.len() > 200 {
+            continue;
+        }
+        prompt.push_str(separator);
+        prompt.push_str(word);
+    }
+    if prompt.is_empty() {
+        None
+    } else {
+        Some(prompt)
+    }
+}
+
+#[cfg(test)]
+mod personal_quality_tests {
+    use super::*;
+    #[test]
+    fn dictionary_budget_preserves_whole_utf8_terms() {
+        let words = vec![
+            "OpenTypeless".into(),
+            "普通话".into(),
+            "x".repeat(300),
+            "Groq".into(),
+            "bad\nword".into(),
+        ];
+        assert_eq!(
+            dictionary_prompt(&words).as_deref(),
+            Some("OpenTypeless, 普通话, Groq")
+        );
+        assert!(dictionary_prompt(&["术语".repeat(50)]).is_none());
+    }
+}
+
 /// Generic provider for any OpenAI Whisper-compatible transcription API.
 /// Works with: OpenAI, Groq, SiliconFlow, GLM-ASR.
 pub struct WhisperCompatProvider {
@@ -46,7 +89,7 @@ impl WhisperCompatProvider {
             provider_config,
             stt_config: None,
             audio_buffer: Vec::new(),
-            client: reqwest::Client::new(),
+            client: crate::build_shared_http_client(),
         }
     }
 
@@ -163,6 +206,15 @@ impl SttProvider for WhisperCompatProvider {
                 }
             }
 
+            if matches!(
+                self.provider_config.provider_name.as_str(),
+                "groq-whisper" | "openai-whisper" | "custom-whisper"
+            ) {
+                if let Some(ref prompt) = config.prompt {
+                    form = form.text("prompt", prompt.clone());
+                }
+            }
+
             // Provider-specific extra fields
             for (key, value) in &self.provider_config.extra_fields {
                 form = form.text(key.clone(), value.clone());
@@ -198,18 +250,11 @@ impl SttProvider for WhisperCompatProvider {
 
                         return Ok(if text.is_empty() { None } else { Some(text) });
                     } else if status.as_u16() >= 500 && attempt < 2 {
-                        let truncate_at = body
-                            .char_indices()
-                            .take_while(|&(i, _)| i < 200)
-                            .last()
-                            .map(|(i, c)| i + c.len_utf8())
-                            .unwrap_or(body.len());
                         tracing::warn!(
-                            "{} server error {} (attempt {}/3): {}",
+                            "{} server error {} (attempt {}/3)",
                             self.provider_config.provider_name,
                             status,
-                            attempt + 1,
-                            &body[..truncate_at]
+                            attempt + 1
                         );
                         attempt += 1;
                         tokio::time::sleep(std::time::Duration::from_millis(
@@ -218,14 +263,9 @@ impl SttProvider for WhisperCompatProvider {
                         .await;
                         continue;
                     } else {
-                        // Truncate at a valid UTF-8 char boundary to avoid panic on multi-byte chars
-                        let truncate_at = body
-                            .char_indices()
-                            .take_while(|&(i, _)| i < 200)
-                            .last()
-                            .map(|(i, c)| i + c.len_utf8())
-                            .unwrap_or(body.len());
-                        let sanitized = &body[..truncate_at];
+                        // Provider error bodies can contain sensitive input.
+                        let sanitized =
+                            "Provider rejected request; check credentials, quota and model.";
                         tracing::error!(
                             "{} HTTP {}: {}",
                             self.provider_config.provider_name,
@@ -308,6 +348,7 @@ mod tests {
             .connect(&SttConfig {
                 api_key: String::new(),
                 language: None,
+                prompt: None,
                 smart_format: true,
                 sample_rate: 16000,
                 resource_id: None,

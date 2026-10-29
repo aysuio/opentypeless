@@ -1,3 +1,5 @@
+> **个人开发分支：** Windows + Android 语音键盘，直连 Groq 和 Google。请先阅读 [本分支说明](PERSONAL-FORK.md)及[安全审查](docs/SECURITY-REVIEW-2026-10-29.md)。下方保留的是上游项目介绍与下载说明，不代表本分支的测试包或账号功能。
+
 <p align="center">
   <a href="README.md">English</a> | <strong>中文</strong> | <a href="README_ja.md">日本語</a> | <a href="README_ko.md">한국어</a> | <a href="README_es.md">Español</a> | <a href="README_fr.md">Français</a> | <a href="README_de.md">Deutsch</a> | <a href="README_pt.md">Português</a> | <a href="README_ru.md">Русский</a> | <a href="README_ar.md">العربية</a> | <a href="README_hi.md">हिन्दी</a> | <a href="README_it.md">Italiano</a> | <a href="README_tr.md">Türkçe</a> | <a href="README_vi.md">Tiếng Việt</a> | <a href="README_th.md">ภาษาไทย</a> | <a href="README_id.md">Bahasa Indonesia</a> | <a href="README_pl.md">Polski</a> | <a href="README_nl.md">Nederlands</a>
 </p>

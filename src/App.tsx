@@ -15,7 +15,6 @@ import {
   getPlatformCapabilities,
   getHotkeyRegistrationError,
 } from './lib/tauri'
-import { initDeepLinkListener } from './lib/deep-link'
 import { readPendingDesktopCheckout } from './lib/desktop-checkout-intent'
 import { shouldRefreshSubscriptionOnFocus } from './lib/subscription-refresh-policy'
 import { Capsule } from './components/Capsule'
@@ -28,7 +27,6 @@ import { UpgradePage } from './components/UpgradePage'
 import { AccountPage } from './components/AccountPage'
 import { AskPanel } from './components/AskPanel'
 import { ToastContainer } from './components/Toast'
-import { UpdatePrompt } from './components/UpdatePrompt'
 
 function CapsuleApp() {
   useTauriEvents()
@@ -148,11 +146,7 @@ function MainApp() {
       setLoaded(true)
     })
 
-    // Initialize auth session (non-blocking)
-    useAuthStore.getState().initialize()
-
-    // Initialize deep-link listener
-    initDeepLinkListener()
+    // Direct-provider edition: no account bootstrap or external login callbacks.
   }, [
     setOnboardingCompleted,
     setConfig,
@@ -224,7 +218,6 @@ function MainApp() {
       {route === 'history' && <History />}
       {route === 'upgrade' && <UpgradePage />}
       {route === 'account' && <AccountPage />}
-      <UpdatePrompt />
       <ToastContainer />
     </MainLayout>
   )

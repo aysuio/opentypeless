@@ -1185,7 +1185,7 @@ impl PipelineHandle {
         *self
             .preloaded_dictionary
             .lock()
-            .unwrap_or_else(|e| e.into_inner()) = Some(dict_words);
+            .unwrap_or_else(|e| e.into_inner()) = Some(dict_words.clone());
         *self
             .preloaded_correction_rules
             .lock()
@@ -1311,6 +1311,7 @@ impl PipelineHandle {
             } else {
                 Some(config_data.stt_language.clone())
             },
+            prompt: stt::whisper_compat::dictionary_prompt(&dict_words),
             smart_format: true,
             sample_rate: 16000,
             resource_id: if config_data.stt_provider == stt::volcengine::VOLCENGINE_DOUBAO_PROVIDER
@@ -2958,99 +2959,6 @@ impl PipelineHandle {
 
         let _ = self.app_handle.emit("pipeline:target_app", app_name);
         Ok(insert_result)
-    }
-
-    async fn pre_warm_endpoint(&self, endpoint: &str, managed_cloud: bool) {
-        tracing::debug!("Pre-warming HTTP connection to {}", endpoint);
-        let request = self.shared_client.head(endpoint);
-        let request = if managed_cloud {
-            crate::with_desktop_client_version(request)
-        } else {
-            request
-        };
-        if let Err(error) = request
-            .timeout(std::time::Duration::from_secs(5))
-            .send()
-            .await
-        {
-            tracing::debug!("HTTP connection pre-warm did not complete: {error}");
-        }
-    }
-
-    /// Pre-warm the active STT and LLM hosts concurrently so the next dictation can reuse TLS.
-    /// Called after startup and whenever provider connection settings change.
-    pub async fn pre_warm(&self) {
-        let config = self.load_config().await;
-
-        let stt_endpoint = match config.stt_provider.as_str() {
-            "cloud" => {
-                let base = crate::api_base_url();
-                Some((format!("{}/api/proxy/stt", base), true))
-            }
-            "glm-asr" => Some((
-                "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions".to_string(),
-                false,
-            )),
-            "openai-whisper" => Some((
-                "https://api.openai.com/v1/audio/transcriptions".to_string(),
-                false,
-            )),
-            "groq-whisper" => Some((
-                "https://api.groq.com/openai/v1/audio/transcriptions".to_string(),
-                false,
-            )),
-            "siliconflow" => Some((
-                "https://api.siliconflow.cn/v1/audio/transcriptions".to_string(),
-                false,
-            )),
-            "deepgram" => Some(("https://api.deepgram.com/v1/listen".to_string(), false)),
-            "assemblyai" => Some((
-                "https://api.assemblyai.com/v2/transcript".to_string(),
-                false,
-            )),
-            stt::volcengine::VOLCENGINE_DOUBAO_PROVIDER => Some((
-                "https://openspeech.bytedance.com/api/v3/sauc/bigmodel_async".to_string(),
-                false,
-            )),
-            stt::config::CUSTOM_WHISPER_PROVIDER => {
-                stt::config::normalize_custom_whisper_endpoint(&config.stt_custom_base_url)
-                    .ok()
-                    .map(|endpoint| (endpoint, false))
-            }
-            _ => {
-                tracing::debug!(
-                    "Unknown STT provider '{}', skipping pre-warm",
-                    config.stt_provider
-                );
-                None
-            }
-        };
-
-        let llm_endpoint = if config.polish_enabled {
-            if config.llm_provider == "cloud" {
-                let base = crate::api_base_url();
-                Some((format!("{}/api/proxy/llm", base), true))
-            } else {
-                crate::llm::protocol::chat_endpoint(&config.llm_provider, &config.llm_base_url)
-                    .ok()
-                    .map(|endpoint| (endpoint, false))
-            }
-        } else {
-            None
-        };
-
-        let warm_stt = async {
-            if let Some((endpoint, managed_cloud)) = stt_endpoint {
-                self.pre_warm_endpoint(&endpoint, managed_cloud).await;
-            }
-        };
-        let warm_llm = async {
-            if let Some((endpoint, managed_cloud)) = llm_endpoint {
-                self.pre_warm_endpoint(&endpoint, managed_cloud).await;
-            }
-        };
-        tokio::join!(warm_stt, warm_llm);
-        tracing::debug!("Provider connection pre-warm complete");
     }
 }
 

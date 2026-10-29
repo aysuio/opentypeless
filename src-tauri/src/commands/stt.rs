@@ -89,6 +89,7 @@ async fn check_volcengine_doubao_connection(
     let config = stt::SttConfig {
         api_key: api_key.to_string(),
         language: Some("zh".to_string()),
+        prompt: None,
         smart_format: true,
         sample_rate: 16000,
         resource_id,
@@ -109,6 +110,7 @@ async fn check_aliyun_qwen3_connection(
     let config = stt::SttConfig {
         api_key: api_key.to_string(),
         language: Some("zh".to_string()),
+        prompt: None,
         smart_format: true,
         sample_rate: 16_000,
         resource_id: None,

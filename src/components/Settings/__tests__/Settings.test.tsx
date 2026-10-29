@@ -313,6 +313,8 @@ function mockHotkeyStatus(overrides: Partial<HotkeyStatus> = {}): HotkeyStatus {
 
 function resetStore() {
   useAppStore.setState(useAppStore.getInitialState())
+  // These toggle tests exercise a previously opted-in user.
+  useAppStore.getState().updateConfig({ auto_start: true, history_enabled: true })
 }
 
 function seedSavedConfig() {
@@ -1477,6 +1479,8 @@ describe('appStore getInitialState 包含 llmModels', () => {
   it('setState(getInitialState()) 后 llmModels 恢复为空', () => {
     useAppStore.getState().setLlmModels(['stale-model'])
     useAppStore.setState(useAppStore.getInitialState())
+    // These toggle tests exercise a previously opted-in user.
+    useAppStore.getState().updateConfig({ auto_start: true, history_enabled: true })
     expect(useAppStore.getState().llmModels).toEqual([])
   })
 

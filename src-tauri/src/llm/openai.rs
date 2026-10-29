@@ -21,7 +21,7 @@ impl Default for OpenAiProvider {
 impl OpenAiProvider {
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
+            client: crate::build_shared_http_client(),
         }
     }
 
@@ -43,7 +43,7 @@ impl LlmProvider for OpenAiProvider {
             .as_ref()
             .is_some_and(|s| !s.trim().is_empty());
 
-        let system_prompt = prompt::build_context_system_prompt(prompt::ContextPromptOptions {
+        let mut system_prompt = prompt::build_context_system_prompt(prompt::ContextPromptOptions {
             context: &req.context,
             dictionary: &req.dictionary,
             correction_rules: &req.correction_rules,
@@ -57,6 +57,13 @@ impl LlmProvider for OpenAiProvider {
             has_selected_text,
             voice_intent: Some(&req.voice_intent),
         });
+
+        if req.voice_intent.kind == crate::voice_intent::VoiceIntentKind::DictateInsert
+            && !req.translate_enabled
+        {
+            system_prompt.push_str("\n\n");
+            system_prompt.push_str(include_str!("../../../shared/polish-instructions.txt"));
+        }
 
         let mut messages = vec![serde_json::json!({ "role": "system", "content": system_prompt })];
         if has_selected_text {
@@ -130,7 +137,7 @@ impl LlmProvider for OpenAiProvider {
                         response = Some(resp);
                         break;
                     } else if status.as_u16() >= 500 && attempt < 2 {
-                        let body_text = resp.text().await.unwrap_or_default();
+                        let body_text = "Provider temporarily unavailable".to_string();
                         tracing::warn!(
                             "LLM server error {} (attempt {}/3), retrying",
                             status,
@@ -148,15 +155,8 @@ impl LlmProvider for OpenAiProvider {
                         continue;
                     } else {
                         let status = resp.status();
-                        let text = resp.text().await.unwrap_or_default();
-                        // Truncate at a valid UTF-8 char boundary to avoid panic on multi-byte chars
-                        let truncate_at = text
-                            .char_indices()
-                            .take_while(|&(i, _)| i < 200)
-                            .last()
-                            .map(|(i, c)| i + c.len_utf8())
-                            .unwrap_or(text.len());
-                        let sanitized = &text[..truncate_at];
+                        let sanitized =
+                            "Provider rejected request; check credentials, quota and model.";
                         return Err(AppError::Api {
                             status: status.as_u16(),
                             body: sanitized.to_string(),

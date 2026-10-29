@@ -545,6 +545,7 @@ mod tests {
         SttConfig {
             api_key: "session-token".to_string(),
             language: None,
+            prompt: None,
             smart_format: true,
             sample_rate: 16_000,
             resource_id: None,

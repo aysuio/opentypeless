@@ -689,6 +689,7 @@ fn build_ask_stt_config(
         } else {
             Some(config.stt_language.clone())
         },
+        prompt: None,
         smart_format: true,
         sample_rate: 16000,
         resource_id: if config.stt_provider == stt::volcengine::VOLCENGINE_DOUBAO_PROVIDER {

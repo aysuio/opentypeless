@@ -1,3 +1,8 @@
+// Exercise the retained upstream module in isolation. Personal-edition blocking is covered by privacy.test.ts.
+vi.mock('../../../lib/privacy', () => ({
+  UPSTREAM_CLOUD_ENABLED: true,
+  requireUpstreamCloud: () => {},
+}))
 import React from 'react'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'

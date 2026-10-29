@@ -1,3 +1,5 @@
+// Exercise the retained upstream module in isolation. Personal-edition blocking is covered by privacy.test.ts.
+vi.mock('../privacy', () => ({ UPSTREAM_CLOUD_ENABLED: true, requireUpstreamCloud: () => {} }))
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke } from '@tauri-apps/api/core'
 import { authClient, requestOpenTypelessPasswordReset } from '../auth-client'

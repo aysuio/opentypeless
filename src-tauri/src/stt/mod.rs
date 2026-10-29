@@ -20,6 +20,8 @@ use whisper_compat::{WhisperCompatConfig, WhisperCompatProvider};
 pub struct SttConfig {
     pub api_key: String,
     pub language: Option<String>,
+    #[serde(default)]
+    pub prompt: Option<String>,
     pub smart_format: bool,
     pub sample_rate: u32,
     pub resource_id: Option<String>,
@@ -33,6 +35,7 @@ impl Default for SttConfig {
         Self {
             api_key: String::new(),
             language: None,
+            prompt: None,
             smart_format: true,
             sample_rate: 16000,
             resource_id: None,

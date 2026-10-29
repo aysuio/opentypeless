@@ -38,7 +38,7 @@ pub fn get_whisper_config(provider: &str) -> Option<SttProviderConfig> {
         }),
         "groq-whisper" => Some(SttProviderConfig {
             endpoint: "https://api.groq.com/openai/v1/audio/transcriptions",
-            model: "whisper-large-v3-turbo",
+            model: "whisper-large-v3",
             extra_fields: &[],
         }),
         "siliconflow" => Some(SttProviderConfig {
@@ -60,6 +60,11 @@ pub fn normalize_custom_whisper_endpoint(base_url: &str) -> Result<String, Strin
         url::Url::parse(trimmed).map_err(|_| "Base URL must be a valid URL".to_string())?;
     if parsed.scheme() != "http" && parsed.scheme() != "https" {
         return Err("Base URL must start with http:// or https://".to_string());
+    }
+    if parsed.scheme() == "http"
+        && !matches!(parsed.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))
+    {
+        return Err("Remote speech services require HTTPS".to_string());
     }
     if !parsed.username().is_empty() || parsed.password().is_some() {
         return Err("Base URL must not include credentials".to_string());
@@ -142,7 +147,7 @@ mod tests {
     fn test_groq_whisper_config() {
         let cfg = get_whisper_config("groq-whisper").unwrap();
         assert!(cfg.endpoint.contains("api.groq.com"));
-        assert_eq!(cfg.model, "whisper-large-v3-turbo");
+        assert_eq!(cfg.model, "whisper-large-v3");
         assert!(cfg.extra_fields.is_empty());
     }
 

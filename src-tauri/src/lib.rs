@@ -40,6 +40,7 @@ const HTTP_TCP_KEEPALIVE_SECS: u64 = 60;
 
 fn build_shared_http_client() -> reqwest::Client {
     reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .pool_max_idle_per_host(2)
         .pool_idle_timeout(std::time::Duration::from_secs(HTTP_POOL_IDLE_TIMEOUT_SECS))
         .tcp_keepalive(std::time::Duration::from_secs(HTTP_TCP_KEEPALIVE_SECS))
@@ -881,7 +882,6 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(action) = parse_cli_action(&args) {
@@ -893,7 +893,6 @@ pub fn run() {
             // Just focus the main window so the user sees the result.
             restore_main_window(app);
         }))
-        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
             // Open devtools only when the "devtools" feature is explicitly enabled
             #[cfg(feature = "devtools")]
@@ -1149,13 +1148,6 @@ pub fn run() {
             }
 
             tracing::info!("OpenTypeless started");
-
-            // P1-2: Pre-warm HTTP connection pool in background
-            let warm_handle = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                let pipeline = warm_handle.state::<pipeline::PipelineHandle>();
-                pipeline.pre_warm().await;
-            });
 
             let startup_args = std::env::args().collect::<Vec<_>>();
             if let Some(action) = parse_cli_action(&startup_args) {

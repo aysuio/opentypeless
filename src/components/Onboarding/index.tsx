@@ -32,6 +32,8 @@ export function Onboarding() {
   const setSavedConfig = useAppStore((s) => s.setSavedConfig)
   const user = useAuthStore((s) => s.user)
 
+  const config = useAppStore((s) => s.config)
+
   const canNext = (() => {
     switch (step) {
       case 0:
@@ -43,7 +45,7 @@ export function Onboarding() {
       case 3:
         return sttTestStatus === 'success' // STT must pass (BYOK only)
       case 4:
-        return llmTestStatus === 'success' // LLM must pass (BYOK only)
+        return !config.polish_enabled || llmTestStatus === 'success' // LLM must pass (BYOK only)
       case 5:
         return true // Permissions — optional
       case 6:
@@ -68,8 +70,6 @@ export function Onboarding() {
     { title: t('onboarding.steps.howItWorks'), subtitle: t('onboarding.steps.howItWorksSub') },
     { title: t('onboarding.steps.setupComplete'), subtitle: undefined },
   ]
-
-  const config = useAppStore((s) => s.config)
 
   const saveConfig = async (draft = config) => {
     setSaveFailed(false)
@@ -101,7 +101,7 @@ export function Onboarding() {
         // Best-effort save — continue navigation even if save fails
       }
 
-      setStep(step + 1)
+      setStep(step === 0 ? 3 : step + 1)
     } else {
       try {
         const saved = await saveConfig(config)
@@ -131,7 +131,7 @@ export function Onboarding() {
 
       // If coming back from STT setup and user skipped login, go back to Account (step 1)
       if (step === 3 && !user) {
-        setStep(1)
+        setStep(0)
         return
       }
 

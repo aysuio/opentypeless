@@ -9,7 +9,7 @@ use crate::HotkeyRegistrationError;
 use crate::HotkeyRoleCache;
 use crate::SessionTokenStore;
 use serde_json::{json, Map, Value};
-use tauri::{Emitter, Manager, Window};
+use tauri::{Emitter, Window};
 
 fn config_patch_between(previous: &storage::AppConfig, next: &storage::AppConfig) -> Value {
     let mut patch = Map::new();
@@ -62,6 +62,15 @@ fn emit_config_patch(app: &tauri::AppHandle, patch: &Value) {
     if patch.as_object().is_some_and(|object| !object.is_empty()) {
         let _ = app.emit("config:patch", patch.clone());
     }
+}
+
+fn validate_personal_provider_config(config: &storage::AppConfig) -> Result<(), String> {
+    if config.stt_provider == "cloud" || config.llm_provider == "cloud" {
+        return Err(
+            "The upstream account service is disabled; choose a direct provider".to_string(),
+        );
+    }
+    Ok(())
 }
 
 fn prepare_config_for_save(mut config: storage::AppConfig) -> Result<storage::AppConfig, String> {
@@ -157,17 +166,6 @@ fn hotkey_runtime_config_changed(previous: &storage::AppConfig, next: &storage::
         || previous.hotkeys != next.hotkeys
 }
 
-fn provider_connection_config_changed(
-    previous: &storage::AppConfig,
-    next: &storage::AppConfig,
-) -> bool {
-    previous.stt_provider != next.stt_provider
-        || previous.stt_custom_base_url != next.stt_custom_base_url
-        || previous.llm_provider != next.llm_provider
-        || previous.llm_base_url != next.llm_base_url
-        || previous.polish_enabled != next.polish_enabled
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct HotkeyRuntimeRefreshError {
     pub registration_error: String,
@@ -249,6 +247,7 @@ pub async fn update_config(
     close_tray_cache: tauri::State<'_, CloseToTrayCache>,
     config: storage::AppConfig,
 ) -> Result<(), String> {
+    validate_personal_provider_config(&config)?;
     let previous = state.load().await.map_err(|e| e.to_string())?;
     let incoming = config;
     let config = prepare_config_for_save(storage::config_with_native_managed_state(
@@ -256,7 +255,6 @@ pub async fn update_config(
         Some(&previous),
     ))?;
     let refresh_hotkeys = hotkey_runtime_config_changed(&previous, &config);
-    let refresh_provider_connections = provider_connection_config_changed(&previous, &config);
 
     if refresh_hotkeys {
         let generation = hotkey_supervisor.wake_for_settings_change();
@@ -305,14 +303,6 @@ pub async fn update_config(
     emit_config_patch(&app, &patch);
     if patch.get("ui_language").is_some() || patch.get("capsule_auto_hide").is_some() {
         crate::refresh_tray(&app);
-    }
-    if refresh_provider_connections {
-        if let Some(pipeline) = app.try_state::<crate::pipeline::PipelineHandle>() {
-            let pipeline = pipeline.inner().clone();
-            tauri::async_runtime::spawn(async move {
-                pipeline.pre_warm().await;
-            });
-        }
     }
     Ok(())
 }
@@ -572,29 +562,9 @@ mod tests {
     }
 
     #[test]
-    fn provider_connection_changes_trigger_pre_warm() {
-        let previous = storage::AppConfig::default();
-        let mut next = previous.clone();
-        next.llm_base_url = "https://api.openai.com/v1".to_string();
-        assert!(provider_connection_config_changed(&previous, &next));
-
-        let mut next = previous.clone();
-        next.stt_custom_base_url = "http://localhost:9000/v1".to_string();
-        assert!(provider_connection_config_changed(&previous, &next));
-    }
-
-    #[test]
-    fn unrelated_settings_do_not_trigger_provider_pre_warm() {
-        let previous = storage::AppConfig::default();
-        let mut next = previous.clone();
-        next.theme = "dark".to_string();
-
-        assert!(!provider_connection_config_changed(&previous, &next));
-    }
-
-    #[test]
     fn prepare_config_clamps_custom_intent_only_when_settings_are_saved() {
         let config = storage::AppConfig {
+            stt_provider: "glm-asr".to_string(),
             recording_limit_mode: crate::stt::capabilities::RecordingLimitMode::Custom,
             custom_recording_limit_seconds: 9_999,
             ..storage::AppConfig::default()
@@ -607,16 +577,27 @@ mod tests {
     }
 
     #[test]
+    fn personal_distribution_rejects_upstream_cloud_at_save_boundary() {
+        let mut config = storage::AppConfig::default();
+        assert!(validate_personal_provider_config(&config).is_ok());
+        config.stt_provider = "cloud".into();
+        assert!(validate_personal_provider_config(&config).is_err());
+        config.stt_provider = "groq-whisper".into();
+        config.llm_provider = "cloud".into();
+        assert!(validate_personal_provider_config(&config).is_err());
+    }
+
+    #[test]
     fn config_patch_includes_history_privacy_changes() {
         let previous = storage::AppConfig::default();
         let mut next = previous.clone();
-        next.history_enabled = false;
+        next.history_enabled = true;
         next.history_retention_days = 30;
         next.history_max_entries = 250;
 
         let patch = config_patch_between(&previous, &next);
 
-        assert_eq!(patch["history_enabled"], false);
+        assert_eq!(patch["history_enabled"], true);
         assert_eq!(patch["history_retention_days"], 30);
         assert_eq!(patch["history_max_entries"], 250);
     }

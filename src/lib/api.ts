@@ -1,3 +1,4 @@
+import { requireUpstreamCloud } from './privacy'
 import {
   API_BASE_URL,
   APP_VERSION_HEADER_VALUE,
@@ -22,6 +23,7 @@ async function request<T>(
   path: string,
   options?: RequestInit & { timeoutMs?: number },
 ): Promise<T> {
+  requireUpstreamCloud()
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options ?? {}
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -265,6 +267,7 @@ export async function proxyStt(
   language: string,
   context?: CloudOperationContext,
 ): Promise<{ text: string }> {
+  requireUpstreamCloud()
   const formData = new FormData()
   formData.append('audio', audioBlob)
   formData.append('language', language)
